@@ -1,0 +1,219 @@
+<div class="container py-5">
+  <div class="custom-card shadow-lg">
+    <div class="custom-card-header d-flex justify-content-between align-items-center">
+      <h3 class="mb-0 text-uppercase">Gestión de Productos</h3>
+      <button
+        class="btn btn-success"
+        data-bs-toggle="modal"
+        data-bs-target="#addProductModal"
+      >
+        Agregar Producto
+      </button>
+    </div>
+
+    <div class="my-3">
+      <input
+        type="text"
+        class="form-control"
+        placeholder="Buscar productos..."
+        [(ngModel)]="searchTerm"
+        (input)="searchProducts()"
+      />
+    </div>
+
+    <div class="custom-card-body">
+      <div class="table-responsive">
+        <table class="table table-borderless custom-table align-middle">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Producto</th>
+              <th>Imagen</th>
+              <th>Acciones</th>
+              <th>Editar</th>
+              <th>Eliminar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let product of paginatedProducts; let i = index">
+              <td>{{ (currentPage - 1) * itemsPerPage + i + 1 }}</td>
+              <td>{{ product.title }}</td>
+              <td>
+                <img
+                  [src]="product.image"
+                  alt="Producto"
+                  class="rounded shadow"
+                  style="width: 90px; height: 90px; object-fit: cover;"
+                />
+              </td>
+              <td>
+                <button
+                  class="btn custom-btn"
+                  data-bs-toggle="modal"
+                  data-bs-target="#detailsModal"
+                  (click)="openModal(product)"
+                >
+                  Detalles
+                </button>
+              </td>
+              <td>
+                <button
+                  class="btn btn-warning"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editModal"
+                  (click)="openEditModal(product)"
+                >
+                  Editar
+                </button>
+              </td>
+              <td>
+                <button
+                  class="btn btn-danger"
+                  data-bs-toggle="modal"
+                  data-bs-target="#deleteModal"
+                  (click)="openDeleteModal(product)"
+                >
+                  Eliminar
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="custom-card-footer d-flex justify-content-between align-items-center">
+      <button
+        class="btn btn-light"
+        [disabled]="currentPage === 1"
+        (click)="prevPage()"
+      >
+        Anterior
+      </button>
+      <span>Página {{ currentPage }}</span>
+      <button
+        class="btn btn-light"
+        [disabled]="currentPage * itemsPerPage >= filteredProducts.length"
+        (click)="nextPage()"
+      >
+        Siguiente
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Detalles -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content custom-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ selectedProduct?.title }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body text-center">
+        <img
+          [src]="selectedProduct?.image"
+          alt="Producto"
+          class="rounded shadow-sm mb-3"
+          style="width: 90px; height: 90px; object-fit: contain;"
+        />
+        <p class="text-muted">{{ selectedProduct?.description }}</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--Modal para Editar-->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content custom-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Editar Producto</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="mb-3">
+            <label for="editTitle" class="form-label">Nombre</label>
+            <input type="text" class="form-control" id="editTitle" [(ngModel)]="editableProduct.title" name="title" />
+          </div>
+          <div class="mb-3">
+            <label for="editDescription" class="form-label">Descripción</label>
+            <textarea class="form-control" id="editDescription" [(ngModel)]="editableProduct.description" name="description"></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="productImage" class="form-label">Imagen (URL)</label>
+            <input
+              type="text"
+              class="form-control"
+              id="productImage"
+              [(ngModel)]="editableProduct.image"
+              name="image"
+            />
+          </div>
+          
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-warning" (click)="saveChanges()">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Modal para Eliminar -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmar Eliminación</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p>¿Estás seguro de eliminar el producto <strong>{{ productToDelete?.title }}</strong>?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+        <button type="button" class="btn btn-danger" (click)="deleteProduct()">Sí, Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--Modal para Agregar-->
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Agregar Producto</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="mb-3">
+            <label for="newProductTitle" class="form-label">Nombre</label>
+            <input type="text" class="form-control" id="newProductTitle" [(ngModel)]="newProduct.title" name="title" />
+          </div>
+          <div class="mb-3">
+            <label for="newProductDescription" class="form-label">Descripción</label>
+            <textarea class="form-control" id="newProductDescription" [(ngModel)]="newProduct.description" name="description"></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="newProductImage" class="form-label">URL de la Imagen</label>
+            <input type="text" class="form-control" id="newProductImage" [(ngModel)]="newProduct.image" name="image" />
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-success" (click)="addProduct()">Agregar</button>
+      </div>
+    </div>
+  </div>
+</div>
