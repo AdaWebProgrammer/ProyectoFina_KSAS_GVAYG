@@ -1,200 +1,187 @@
-#  Login usando APIs
+# Documentación de Componentes CRUD y Login
 
-Este documento describe el componente de login implementado con Angular Material, que se conecta a una API externa para validar el inicio de sesión. A continuación, se proporciona una descripción detallada de las partes más relevantes del código.
+## Introducción
+Este proyecto utiliza Angular para gestionar funcionalidades como el inicio de sesión y las operaciones CRUD (Crear, Leer, Actualizar y Eliminar) en tablas de productos y usuarios. A continuación, se presenta una descripción interactiva y práctica de cada componente.
 
-#### Descripción General
+---
 
-El LoginComponent es un componente independiente de Angular que permite a los usuarios autenticarse a través de un formulario. Este formulario solicita el correo electrónico y la contraseña del usuario, que luego se validan mediante una API externa. El componente está desarrollado usando Angular Material para estilizar el formulario y HttpClient para gestionar las solicitudes HTTP.
+## 1. Componente de Login
+### Qué hace este componente
+Permite a los usuarios autenticarse ingresando su correo electrónico y contraseña. Si la autenticación es exitosa, el usuario es redirigido al dashboard.
 
-#### Estructura del Proyecto
+### Características clave
+- **Formulario reactivo**: Validaciones integradas (requerido y formato de correo).
+- **Interacción con el API**: Solicitud `POST` para validar credenciales.
+- **Redirección**: Navegación automática tras el inicio de sesión exitoso.
 
-Imports Principales: El componente importa varios módulos de Angular y Angular Material, incluidos MatButtonModule, MatCardModule, HttpClientModule, entre otros. Además, se utiliza ReactiveFormsModule para gestionar el formulario de login.
-
-Formulario de Login: Se crea usando FormGroup y FormControl, estableciendo validaciones para los campos de correo y contraseña.
-
-Conexión con la API: Se realiza una solicitud HTTP a la API https://api.escuelajs.co/api/v1/users para validar las credenciales ingresadas por el usuario.
-
-#### Código Completo
-
-import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { FlexLayoutModule } from '@angular/flex-layout';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { signal } from '@angular/core';
-import { FormControl, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { merge } from 'rxjs';
-import { HttpClientModule, HttpClient } from '@angular/common/http';
-
-@Component({
-  selector: 'app-login',
-  standalone: true,
-  templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css'],
-  imports: [
-    CommonModule,
-    MatCardModule,
-    MatButtonModule,
-    FlexLayoutModule,
-    MatIconModule,
-    MatFormFieldModule,
-    MatInputModule,
-    ReactiveFormsModule,
-    HttpClientModule
-  ],
-  changeDetection: ChangeDetectionStrategy.OnPush
-})
-export default class LoginComponent {
-  hide = signal(true);
-
-  loginForm = new FormGroup({
-    email: new FormControl('', [Validators.required, Validators.email]),
-    password: new FormControl('', [Validators.required])
-  });
-
-  errorMessage = signal('');
-
-  constructor(private router: Router, private http: HttpClient) {
-    merge(this.loginForm.get('email')!.statusChanges, this.loginForm.get('email')!.valueChanges)
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => this.updateErrorMessage());
-  }
-
-  clickEvent(event: MouseEvent) {
-    this.hide.set(!this.hide());
-    event.stopPropagation();
-  }
-
-  updateErrorMessage() {
-    if (this.loginForm.get('email')?.hasError('required')) {
-      this.errorMessage.set('You must enter a value');
-    } else if (this.loginForm.get('email')?.hasError('email')) {
-      this.errorMessage.set('Not a valid email');
-    } else {
-      this.errorMessage.set('');
-    }
-  }
-
-  onSubmit() {
-    if (this.loginForm.invalid) {
-      this.errorMessage.set('Por favor, completa todos los campos correctamente.');
-      window.alert('Por favor, completa todos los campos correctamente.');
-      return;
-    }
-
-    const email = this.loginForm.get('email')?.value;
-    const password = this.loginForm.get('password')?.value;
-
-    // Realizar la solicitud HTTP para obtener los usuarios
-    this.http.get<any[]>('https://api.escuelajs.co/api/v1/users').subscribe(
-      (usuarios) => {
-        // Buscar si existe un usuario con el correo y contraseña ingresados
-        const usuarioValido = usuarios.find(
-          (usuario) => usuario.email === email && usuario.password === password
-        );
-
-        if (usuarioValido) {
-          // Login exitoso
-          console.log('Login exitoso');
-          window.alert('Bienvenido, ' + usuarioValido.name);
-          this.router.navigate(['/sidebar']);
-        } else {
-          // Login fallido
-          this.errorMessage.set('Correo o contraseña incorrectos.');
-          window.alert('Correo o contraseña incorrectos.');
+### Ejemplo Dinámico
+```typescript
+onSubmit() {
+  if (this.loginForm.valid) {
+    this.http.post('http://127.0.0.1:8000/api/login', this.loginForm.value)
+      .subscribe({
+        next: (response) => {
+          console.log('Login exitoso:', response);
+          this.router.navigate(['/dashboard']);
+        },
+        error: (error) => {
+          console.error('Error al iniciar sesión:', error);
         }
-      },
-      (error) => {
-        console.error('Error al obtener los usuarios:', error);
-        this.errorMessage.set('Hubo un problema al iniciar sesión. Por favor, intenta más tarde.');
-        window.alert('Hubo un problema al iniciar sesión. Por favor, intenta más tarde.');
-      }
-    );
+      });
   }
 }
+```
+### Prueba en Acción
+1. Ingresa un correo válido (e.g., `usuario@ejemplo.com`).
+2. Agrega una contraseña cualquiera.
+3. Observa cómo el sistema autentica y redirige.
 
+---
 
-#### Conexion
+## 2. Tabla de Productos
+### Qué hace este componente
+Permite visualizar, agregar, editar y eliminar productos. Es ideal para gestionar catálogos o inventarios.
 
-##### Conexión con la API
+### Características clave
+- **Carga automática**: Recupera productos del API al cargar el componente.
+- **CRUD completo**: Operaciones para agregar, actualizar y eliminar productos.
 
-La conexión con la API se realiza utilizando HttpClient de Angular. Para que funcione correctamente, se debe importar HttpClientModule en el módulo o componente donde se vaya a usar. En este caso, se importa directamente en el componente independiente (standalone).
+### Ejemplo Dinámico
+**Cargar Productos**
+```typescript
+loadProducts() {
+  this.http.get<any[]>(this.apiUrl)
+    .subscribe(data => {
+      this.products = data;
+      console.log('Productos cargados:', this.products);
+    });
+}
+```
+**Agregar Producto**
+```typescript
+addProduct(product: any) {
+  this.http.post(this.apiUrl, product)
+    .subscribe(response => {
+      console.log('Producto agregado:', response);
+      this.loadProducts();
+    });
+}
+```
+**Editar Producto**
+```typescript
+updateProduct(product: any) {
+  const url = `${this.apiUrl}/${product.id}`;
+  this.http.put(url, product)
+    .subscribe(response => {
+      console.log('Producto actualizado:', response);
+      this.loadProducts();
+    });
+}
+```
+**Eliminar Producto**
+```typescript
+deleteProduct(productId: number) {
+  const url = `${this.apiUrl}/${productId}`;
+  this.http.delete(url)
+    .subscribe(response => {
+      console.log('Producto eliminado:', response);
+      this.loadProducts();
+    });
+}
+```
 
+### Interactividad
+1. **Carga**: Abre la tabla y verifica los productos cargados.
+2. **Agregar**: Introduce un nuevo producto y observa la actualización.
+3. **Editar**: Modifica un producto existente y confirma los cambios.
+4. **Eliminar**: Borra un producto y verifica el impacto inmediato.
 
-import { HttpClientModule, HttpClient } from '@angular/common/http';
-...
-imports: [
-  ...
-  HttpClientModule
-]`
+---
 
-Dentro del método onSubmit(), se realiza una solicitud GET a la API para obtener una lista de usuarios y verificar las credenciales proporcionadas por el usuario.
+## 3. Tabla de Usuarios
+### Qué hace este componente
+Gestiona la información de los usuarios del sistema, incluyendo sus detalles personales.
 
-##### Validación de Login
+### Características clave
+- **Listado completo**: Muestra a todos los usuarios.
+- **CRUD completo**: Permite agregar, editar y eliminar usuarios.
 
-El formulario de login está diseñado usando FormGroup y FormControl para facilitar la validación de los campos. En el método onSubmit(), se comprueba si las credenciales ingresadas por el usuario coinciden con los datos obtenidos de la API. Si el correo electrónico o la contraseña son incorrectos, se muestra un mensaje de error.
+### Ejemplo Dinámico
+**Cargar Usuarios**
+```typescript
+loadUsers() {
+  this.http.get<any[]>(this.apiUrl)
+    .subscribe(data => {
+      this.users = data;
+      console.log('Usuarios cargados:', this.users);
+    });
+}
+```
+**Eliminar Usuario**
+```typescript
+deleteUser(userId: number) {
+  const url = `${this.apiUrl}/${userId}`;
+  this.http.delete(url)
+    .subscribe(response => {
+      console.log('Usuario eliminado:', response);
+      this.loadUsers();
+    });
+}
+```
 
+### Interactividad
+1. **Cargar**: Abre la tabla para visualizar los usuarios actuales.
+2. **Agregar**: Crea un nuevo usuario y confírmalo en la lista.
+3. **Editar**: Cambia información de un usuario y guarda los cambios.
+4. **Eliminar**: Prueba eliminando un usuario y observa la lista actualizada.
 
+---
 
-onSubmit() {
-  if (this.loginForm.invalid) {
-    this.errorMessage.set('Por favor, completa todos los campos correctamente.');
-    window.alert('Por favor, completa todos los campos correctamente.');
-    return;
-  }
+## 4. Cerrar Sesión
+### Qué hace este componente
+Permite a los usuarios cerrar su sesión actual de manera segura y limpia. Adicionalmente, muestra la foto de perfil del usuario autenticado.
 
-  const email = this.loginForm.get('email')?.value;
-  const password = this.loginForm.get('password')?.value;
+### Características clave
+- **Foto de perfil**: Se muestra una imagen del usuario.
+- **Cierre de sesión**: Borra las credenciales y redirige al login.
 
-  // Realizar la solicitud HTTP para obtener los usuarios
-  this.http.get<any[]>('https://api.escuelajs.co/api/v1/users').subscribe(
-    (usuarios) => {
-      const usuarioValido = usuarios.find(
-        (usuario) => usuario.email === email && usuario.password === password
-      );
-
-      if (usuarioValido) {
-        console.log('Login exitoso');
-        window.alert('Bienvenido, ' + usuarioValido.name);
-        this.router.navigate(['/sidebar']);
-      } else {
-        this.errorMessage.set('Correo o contraseña incorrectos.');
-        window.alert('Correo o contraseña incorrectos.');
-      }
+### Ejemplo Dinámico
+**Mostrar Foto y Cerrar Sesión**
+```typescript
+logout() {
+  this.http.post('http://127.0.0.1:8000/api/logout', {}).subscribe({
+    next: () => {
+      console.log('Sesión cerrada');
+      this.router.navigate(['/login']);
     },
-    (error) => {
-      console.error('Error al obtener los usuarios:', error);
-      this.errorMessage.set('Hubo un problema al iniciar sesión. Por favor, intenta más tarde.');
-      window.alert('Hubo un problema al iniciar sesión. Por favor, intenta más tarde.');
+    error: (error) => {
+      console.error('Error al cerrar sesión:', error);
     }
-  );
-}`
+  });
+}
+```
 
-------------
+**HTML**
+```html
+<div class="profile">
+  <img [src]="user.profilePicture" alt="Foto de perfil">
+  <button (click)="logout()">Cerrar Sesión</button>
+</div>
+```
 
+### Interactividad
+1. Asegúrate de que el usuario haya iniciado sesión.
+2. Verifica que la foto de perfil aparece correctamente.
+3. Haz clic en "Cerrar Sesión" y observa la redirección al login.
 
-#### Cómo Ejecutar el Proyecto
+---
 
-1.-Asegúrate de tener Angular CLI instalado en tu sistema.
+## Conclusión
+Este sistema es altamente funcional y flexible, permitiendo gestionar tanto la autenticación como los datos de usuarios y productos. Algunos puntos clave incluyen:
 
-2.-Clona el repositorio y navega hasta el directorio del proyecto.
+1. **Integración de API**: Gracias a `HttpClient`, la comunicación con el servidor es directa y eficiente.
+2. **Modularidad**: Los componentes están diseñados para ser reutilizables y escalables.
+3. **Interactividad**: La estructura del proyecto facilita probar y ajustar cada función de manera sencilla.
 
-3.-Ejecuta npm install para instalar las dependencias.
+Este sistema es una excelente base para construir aplicaciones web modernas. Su enfoque modular permite agregar nuevas características, como notificaciones en tiempo real, análisis de datos o exportación de reportes. Además, la implementación actual es adaptable para trabajar con diferentes APIs o servicios en la nube, haciéndolo ideal para proyectos empresariales o académicos.
 
-4.-Utiliza ng serve para iniciar el servidor de desarrollo y acceder al componente de inicio de sesión.
-
-#### Notas
-
-El código utiliza window.alert() para mostrar mensajes al usuario. En un entorno de producción, se recomienda utilizar componentes más sofisticados para manejar las notificaciones.
-
-### Prueba del LOGIN
-![image](https://github.com/user-attachments/assets/ffbda6e6-17ae-4a75-814c-6ab1f8817581)
-
-
-#### Autor
-Ambrocio Sanchéz Kevin Slater
